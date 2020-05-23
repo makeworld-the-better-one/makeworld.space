@@ -1,0 +1,11 @@
+:root {
+    --nc-bg-1: #292929;
+    --nc-bg-2: #165D00;
+    --nc-bg-3: #000000;
+    --nc-tx-2: #FFFFFF;
+    --nc-lk-1: #00BDFF;
+    --nc-lk-2: #008ABA;
+    --nc-ac-tx: #000000;
+    --nc-ac-1: #FFFFFF;
+}
+span.nobr { white-space: nowrap; }
