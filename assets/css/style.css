@@ -18,3 +18,10 @@ footer {
     padding-left: calc(50vw - 50%);
     padding-right: calc(50vw - 50%);
 }
+
+img.emoji {
+   height: 1em;
+   width: 1em;
+   margin: 0 .05em 0 .1em;
+   vertical-align: -0.1em;
+}
