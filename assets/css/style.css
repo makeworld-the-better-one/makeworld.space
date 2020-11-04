@@ -25,3 +25,12 @@ img.emoji {
    margin: 0 .05em 0 .1em;
    vertical-align: -0.1em;
 }
+
+#headshot {
+    height: 10em;
+    display: block;
+    object-fit: contain;
+    margin-left: 5%;
+    margin-right: auto;
+    margin-top: 1em;
+}
