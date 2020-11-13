@@ -1,5 +1,5 @@
 :root {
-    --nc-bg-1: #292929;
+    --nc-bg-1: #303030; /*#292929;*/
     --nc-bg-2: #165D00;
     --nc-bg-3: #000000;
     --nc-tx-2: #FFFFFF;
@@ -7,8 +7,26 @@
     --nc-lk-2: #008ABA;
     --nc-ac-tx: #000000;
     --nc-ac-1: #FFFFFF;
+
+    --code: #1F4025; /*#401F1F;*/
 }
 span.nobr { white-space: nowrap; }
+
+code, kbd, samp {
+    background: var(--code);
+    /* Increase border size from default and reduce padding */
+    border: 2px solid var(--nc-bg-3);
+    padding: 2px 4px;
+}
+
+pre {
+    background: var(--code);
+    border: 2px solid var(--nc-bg-3);
+}
+
+blockquote {
+    font-style: italic;
+}
 
 footer {
     font-size: 0.8rem;

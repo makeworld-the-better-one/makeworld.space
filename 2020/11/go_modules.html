@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Introduction to Go Modules</title>
+<script async src="/assets/js/ack.min.js" data-ackee-server="https://ackee.makeworld.gq" data-ackee-domain-id="02d12b86-d4f4-47f4-ab2b-b2dbf2a7525c"></script>
+<script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://fonts.xz.style/serve/inter.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+<link rel="stylesheet" href="https://newcss.net/theme/terminal.css"> 
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="/assets/css/code.css">
+<link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Atom feed" />
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Introduction to Go Modules | www.makeworld.gq</title>
+<meta name="generator" content="Jekyll v4.1.1" />
+<meta property="og:title" content="Introduction to Go Modules" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="I’ve seen many people online talk about liking Go and using it, but being confused by its dependency system, called Go modules. This blog post aims to provide a simple introduction with examples. It focuses mostly on Unix-based systems like Linux and macOS over Windows." />
+<meta property="og:description" content="I’ve seen many people online talk about liking Go and using it, but being confused by its dependency system, called Go modules. This blog post aims to provide a simple introduction with examples. It focuses mostly on Unix-based systems like Linux and macOS over Windows." />
+<link rel="canonical" href="https://www.makeworld.gq/2020/11/go_modules.html" />
+<meta property="og:url" content="https://www.makeworld.gq/2020/11/go_modules.html" />
+<meta property="og:site_name" content="www.makeworld.gq" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-11-13T00:00:00-05:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Introduction to Go Modules" />
+<script type="application/ld+json">
+{"description":"I’ve seen many people online talk about liking Go and using it, but being confused by its dependency system, called Go modules. This blog post aims to provide a simple introduction with examples. It focuses mostly on Unix-based systems like Linux and macOS over Windows.","url":"https://www.makeworld.gq/2020/11/go_modules.html","@type":"BlogPosting","headline":"Introduction to Go Modules","dateModified":"2020-11-13T00:00:00-05:00","datePublished":"2020-11-13T00:00:00-05:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://www.makeworld.gq/2020/11/go_modules.html"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://www.makeworld.gq/assets/images/cube.png"}},"@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+</head>
+<body>
+    <a rel="me" href="https://sunbeam.city/@makeworld"></a>
+    <header>
+        <h3><span class="nobr">www.makeworld.gq</span></h3>
+        <nav><a href="/">Home</a>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+</nav>
+    </header><h1>Introduction to Go Modules</h1><p>Nov 13th, 2020<br>
+by <strong>makeworld</strong></p>
+
+<p>I’ve seen many people online talk about liking <a href="https://golang.org/">Go</a> and using it, but being confused by its dependency system,
+called Go modules. This blog post aims to provide a simple introduction with examples. It focuses mostly
+on Unix-based systems like Linux and macOS over Windows.</p>
+
+<p>This post does not cover all possible ways of using Go modules. It’s just a simple introduction with the most
+common use cases.</p>
+
+<h2 id="background-knowledge">Background knowledge</h2>
+
+<p>You should know about <a href="https://semver.org/">Semantic Versioning</a>. Pretty much all Go modules are expected
+to follow it, and it will help you when upgrading modules or releasing your own.</p>
+
+<h2 id="setup">Setup</h2>
+
+<p>I assume you already have Go installed. Go modules have preliminary support since Go 1.11, but Go module
+support improves with with each release. I’d recommend installing at least Go 1.13, but install the 
+latest version if you can.</p>
+
+<p>To begin the setup, you need to be aware of some environment variables. By default <code class="language-plaintext highlighter-rouge">GOPATH</code> is set to
+<code class="language-plaintext highlighter-rouge">~/go</code>, and <code class="language-plaintext highlighter-rouge">GOBIN</code> is set to <code class="language-plaintext highlighter-rouge">~/go/bin</code>. I would not recommend changing this. There is also <code class="language-plaintext highlighter-rouge">GOMODCACHE</code>
+(added in Go 1.15) which defaults to <code class="language-plaintext highlighter-rouge">GOPATH[0]/pkg/mod</code>, which would be <code class="language-plaintext highlighter-rouge">~/go/pkg/mod</code> if you don’t
+change any variables. It holds the cache of modules you’ve downloaded.</p>
+
+<p>There is one other variable, <code class="language-plaintext highlighter-rouge">GO111MODULE</code>. This variable controls whether Go modules are enabled
+and being used to manage dependencies. If it’s set to <code class="language-plaintext highlighter-rouge">auto</code> or <code class="language-plaintext highlighter-rouge">on</code>, you should be good. If it’s
+set to <code class="language-plaintext highlighter-rouge">off</code>, then you must change it. If you’re using a Go version earlier than
+1.13, you must set it to <code class="language-plaintext highlighter-rouge">on</code>, as the older <code class="language-plaintext highlighter-rouge">auto</code> behavior is not appropriate for this tutorial.</p>
+
+<p>To check your current setup, you can run <code class="language-plaintext highlighter-rouge">go env</code> and see all the variables Go is working with.</p>
+
+<h2 id="theory">Theory</h2>
+
+<p>You can skip this section if you just want to start using Go modules. But this might be helpful for
+people coming from other languages like Python or Rust.</p>
+
+<p>Most programming languages handle dependencies by having a official registry/repository of packages
+that users can upload to. Think of PyPI, CPAN, NPM, crates.io, and more. Go takes a much more
+decentralized approach. Modules can exist anywhere on the Web, and they are defined with an HTTP(S)
+path.</p>
+
+<p>For example, a valid module path would be <code class="language-plaintext highlighter-rouge">github.com/username/repo</code>. It could also be <code class="language-plaintext highlighter-rouge">mydomain.com/foo</code>.
+In either case, to download the module Go will first try to download from a proxy (<code class="language-plaintext highlighter-rouge">GOPROXY</code>), and then
+fallback to looking at the HTML of the URL provided to find where the code lives. For more info on this
+process and the HTML required, you can read more <a href="https://golang.org/ref/mod#vcs">here</a>.</p>
+
+<p>You will not need to bother with any of this for most Git hosting providers. GitHub, Gitlab, Gitea, etc.,
+will all create the needed HTML for you, and you can just specify a module path like <code class="language-plaintext highlighter-rouge">github.com/username/repo</code>.</p>
+
+<h2 id="creating-a-module">Creating a module</h2>
+
+<p>First, your module needs a folder. To keep things simple, the path to this folder should double as its module
+path. So if you’re using GitHub, your username is <code class="language-plaintext highlighter-rouge">user</code>, and your project is called <code class="language-plaintext highlighter-rouge">foo</code>, your project should
+live at <code class="language-plaintext highlighter-rouge">$GOPATH/src/github.com/user/foo</code>, which by default will be <code class="language-plaintext highlighter-rouge">~/go/src/github.com/user/foo</code>.</p>
+
+<p>Then go into your project folder and run <code class="language-plaintext highlighter-rouge">go mod init</code>.</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">mkdir</span> <span class="nt">-p</span> <span class="nv">$GOPATH</span>/src/github.com/user/foo
+<span class="nv">$ </span><span class="nb">cd</span> <span class="nv">$GOPATH</span>/src/github.com/user/foo
+<span class="nv">$ </span>go mod init
+go: creating new go.mod: module github.com/user/foo
+</code></pre></div></div>
+
+<p>If you’re really against this layout, you’re welcome to create your projects anywhere.
+The only difference for this entire tutorial is that you run <code class="language-plaintext highlighter-rouge">go mod init</code> differently. You will have to specify
+the module path, since Go can’t infer it.</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>go mod init github.com/user/foo
+go: creating new go.mod: module github.com/user/foo
+</code></pre></div></div>
+
+<p>Running <code class="language-plaintext highlighter-rouge">go mod init</code> will create a <code class="language-plaintext highlighter-rouge">go.mod</code> file in the project folder. This is how Go declares its dependencies –
+with a <code class="language-plaintext highlighter-rouge">go.mod</code> file, and also a <code class="language-plaintext highlighter-rouge">go.sum</code> file that we’ll see later. You should always be uploading these files
+with the rest of your code.</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">cat </span>go.mod
+module github.com/user/foo
+
+go 1.15
+</code></pre></div></div>
+
+<p>Besides declaring your dependencies, the <code class="language-plaintext highlighter-rouge">go.mod</code> file also tells Go that this project really is a module, and gives
+it its path.</p>
+
+<p>Most of the time you shouldn’t need to edit <code class="language-plaintext highlighter-rouge">go.mod</code> or <code class="language-plaintext highlighter-rouge">go.sum</code> by hand. Instead you should let it be
+changed by running commands.</p>
+
+<h2 id="adding-dependencies">Adding dependencies</h2>
+
+<p>Alright, now you have a project, presumably with some code, and a <code class="language-plaintext highlighter-rouge">go.mod</code> file. Time to add some dependencies.
+The main commands for that are <code class="language-plaintext highlighter-rouge">go get</code> and <code class="language-plaintext highlighter-rouge">go mod tidy</code>.</p>
+
+<p>You use <code class="language-plaintext highlighter-rouge">go get</code> to add dependencies. Here are some examples:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>go get github.com/bar/baz         <span class="c"># Latest version</span>
+go get github.com/bar/baz@master  <span class="c"># Latest commit on master</span>
+go get github.com/bar/baz@e0ffd3a <span class="c"># The module at commit e0ffd3a</span>
+go get github.com/bar/baz@v1.2.3  <span class="c"># Version 1.2.3 (using git tags)</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">go get</code> accepts some other flags that I don’t need to cover here. One flag to avoid is <code class="language-plaintext highlighter-rouge">-u</code>, as it updates all the
+downstream dependencies of a module (not changing a major version), which could cause breakage.</p>
+
+<p>My suggestion would be to use the commit or tag syntax as much as possible, so that you know explicitly what version of
+dependencies you’re adding, and to not use any flags.</p>
+
+<p>The other important command after adding dependencies is <code class="language-plaintext highlighter-rouge">go mod tidy</code>. This command cleans up your <code class="language-plaintext highlighter-rouge">go.mod</code> and <code class="language-plaintext highlighter-rouge">go.sum</code>
+files, removing unused entries and adding missing ones. It’s good to run this right after adding a dependency, and before
+committing your code. You can run this command multiple times without any worry, if everything is in order than it will
+just change nothing.</p>
+
+<p>You can now use the dependency you added in your code, using the module path.</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">(</span>
+    <span class="s">"github.com/bar/baz"</span>
+<span class="p">)</span>
+
+<span class="k">func</span> <span class="n">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">baz</span><span class="o">.</span><span class="n">Something</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="dependencies-beyond-v1">Dependencies beyond v1</h2>
+
+<p>This is the part that gets a bit trickier. In Go, the module path changes with every major version update. So the path
+for v1.0.0 of baz, all the way to v1.99.99 of baz is still <code class="language-plaintext highlighter-rouge">github.com/bar/baz</code>. But once baz v2.0.0 is released, the
+module path is now <code class="language-plaintext highlighter-rouge">github.com/bar/baz/v2</code>. Note that’s not <code class="language-plaintext highlighter-rouge">@v2</code>, but <code class="language-plaintext highlighter-rouge">/v2</code>.</p>
+
+<p>This happens because major versions are supposed to represent breaking changes. So it’s important to allow your project
+to be able to use v2, while one of your dependencies still uses v1. This is achieved by making the module paths different.</p>
+
+<p>The only changes you need to make is to use a slightly different <code class="language-plaintext highlighter-rouge">go get</code> command, and to update your code import paths.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>go get github.com/bar/baz/v2         <span class="c"># Latest version of v2</span>
+go get github.com/bar/baz/v2@e0ffd3a <span class="c"># The module at commit e0ffd3a (must be a commit after v2 release)</span>
+go get github.com/bar/baz/v2@v2.2.3  <span class="c"># A specific v2 version</span>
+</code></pre></div></div>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">(</span>
+    <span class="s">"github.com/bar/baz/v2"</span> <span class="c">// Uses the new path</span>
+<span class="p">)</span>
+
+<span class="k">func</span> <span class="n">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">baz</span><span class="o">.</span><span class="n">Something</span><span class="p">()</span> <span class="c">// Module name is still 'baz', not 'v2' or something</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="publishing-a-module">Publishing a module</h2>
+
+<p>The simplest way to publish a module is to use git, and a git host. Examples include GitHub, Gitlab, sr.ht, etc. Upload
+your Go code there, and make sure it has at least a <code class="language-plaintext highlighter-rouge">go.mod</code> file. Now anyone can use it as a module!</p>
+
+<p>You should probably have versioning though, and you can do that with git tags, or by using the releasing system on your
+git host. For example, on GitHub you can click the Releases tab, and then “Draft a new release”.</p>
+
+<p>Doing simple tags with git is pretty easy as well:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git tag v1.2.3  <span class="c"># Whatever version this commit is</span>
+git push <span class="nt">--tags</span>
+</code></pre></div></div>
+
+<p>Make sure your release name follows <a href="https://semver.org/">Semantic Versioning</a>, and starts with a <code class="language-plaintext highlighter-rouge">v</code>!</p>
+
+<h2 id="major-version-updates-to-your-module">Major version updates to your module</h2>
+
+<p>So, you’ve been working on a v1 module for a while, but now you need to make a breaking change. This means you need to
+release a new major version.</p>
+
+<p>Keep in mind, this is not required from v0 to v1, read about <a href="https://semver.org/">Semantic Versioning</a>
+to know why. But if you’re already on v1 and want to make a breaking change, then read on.</p>
+
+<p>There are a couple different ways to do this. Assuming you don’t need compatibility with Go versions older than 1.9.7 or 1.10.3,
+than this method should work fine. If you do, you can read more <a href="https://github.com/golang/go/wiki/Modules#releasing-modules-v2-or-higher">here</a>.</p>
+
+<p>1. Update your <code class="language-plaintext highlighter-rouge">go.mod</code> file to include a <code class="language-plaintext highlighter-rouge">/v2</code> at the end of the module path.</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">cat </span>go.mod
+module github.com/user/foo/v2
+
+go 1.15
+</code></pre></div></div>
+
+<p>2. Update all your internal import statements to use the new <code class="language-plaintext highlighter-rouge">/v2</code> path. Anytime you import your own module in your code, you need
+to update that import.</p>
+
+<p>3. Commit, push, tag, push tag.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Commit and push, and then...</span>
+git tag v2.0.0
+git push <span class="nt">--tags</span>
+</code></pre></div></div>
+
+<h2 id="sources">Sources</h2>
+
+<p>The Go blog has a series on using Go modules, here’s the <a href="https://blog.golang.org/using-go-modules">first post</a>.</p>
+
+<p>The official Go Wiki has a <a href="https://github.com/golang/go/wiki/Modules">page on Modules</a>.</p>
+
+<p>There is also an official <a href="https://golang.org/ref/mod">technical reference</a>, which should be considered the definitive/primary
+source for any info. It applies to Go 1.15 and later.</p>
+
+
+
+    <footer>
+        <br />
+        <br />
+        <br />
+        <br />
+        <br /><hr />
+<p>
+<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/80x15.png" /></a><br/>All works on this site created by me are licensed under the <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. They may not be used for commercial purposes.
+</p>
+</footer>
+    <script>
+      twemoji.parse(document.body);
+    </script>
+</body>
+</html>
