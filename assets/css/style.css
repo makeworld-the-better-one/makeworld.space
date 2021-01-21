@@ -1,12 +1,17 @@
+@import url("https://fonts.xz.style/serve/fira-code.css");
+
 :root {
+	--nc-font-sans: 'Fira Code', monospace;
+	--nc-font-mono: 'Fira Code', monospace;
     --nc-bg-1: #303030; /*#292929;*/
     --nc-bg-2: #165D00;
     --nc-bg-3: #000000;
+    --nc-tx-1: #FFFFFF;
     --nc-tx-2: #FFFFFF;
     --nc-lk-1: #00BDFF;
     --nc-lk-2: #008ABA;
-    --nc-ac-tx: #000000;
     --nc-ac-1: #FFFFFF;
+    --nc-ac-tx: #000000;
 
     --code: #1F4025; /*#401F1F;*/
 }
@@ -52,3 +57,5 @@ img.emoji {
     margin-right: auto;
     margin-top: 1em;
 }
+
+/* Font size changes for mobile TODO*/
