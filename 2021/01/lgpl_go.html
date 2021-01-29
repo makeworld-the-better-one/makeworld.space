@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Don't use the LGPL for Go code</title>
+<script async src="/assets/js/ack.min.js" data-ackee-server="https://ackee.makeworld.gq" data-ackee-domain-id="02d12b86-d4f4-47f4-ab2b-b2dbf2a7525c"></script>
+<script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://fonts.xz.style/serve/inter.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.3/new.min.css">
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="/assets/css/code.css">
+<link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Atom feed" />
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Don’t use the LGPL for Go code | www.makeworld.gq</title>
+<meta name="generator" content="Jekyll v4.1.1" />
+<meta property="og:title" content="Don’t use the LGPL for Go code" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="TL;DR: Use the Mozilla Public License (MPL 2.0). It’s like the LGPL, but allows static linking." />
+<meta property="og:description" content="TL;DR: Use the Mozilla Public License (MPL 2.0). It’s like the LGPL, but allows static linking." />
+<link rel="canonical" href="https://www.makeworld.gq/2021/01/lgpl_go.html" />
+<meta property="og:url" content="https://www.makeworld.gq/2021/01/lgpl_go.html" />
+<meta property="og:site_name" content="www.makeworld.gq" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2021-01-29T00:00:00-05:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Don’t use the LGPL for Go code" />
+<script type="application/ld+json">
+{"headline":"Don’t use the LGPL for Go code","dateModified":"2021-01-29T00:00:00-05:00","description":"TL;DR: Use the Mozilla Public License (MPL 2.0). It’s like the LGPL, but allows static linking.","datePublished":"2021-01-29T00:00:00-05:00","url":"https://www.makeworld.gq/2021/01/lgpl_go.html","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"https://www.makeworld.gq/2021/01/lgpl_go.html"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://www.makeworld.gq/assets/images/cube.png"}},"@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+</head>
+<body>
+    <a rel="me" href="https://sunbeam.city/@makeworld"></a>
+    <header>
+        <h3><span class="nobr">www.makeworld.gq</span></h3>
+        <nav><a href="/">Home</a>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+</nav>
+    </header><h1>Don't use the LGPL for Go code</h1><p>Jan 29th, 2021<br>
+by <strong>makeworld</strong></p>
+
+<p><strong>TL;DR:</strong> Use the Mozilla Public License (MPL 2.0). It’s like the LGPL, but allows static linking.</p>
+
+<hr />
+
+<p>I’m working on a dithering library in Go. I’ll be releasing it soon, in a few weeks maybe,
+and I’ll write a post about it when that time comes. But it got me thinking about licensing,
+and what license I should use for the library.</p>
+
+<p>The vast majority of libraries I’ve seen stick to permissive licenses, mainly MIT. And I understand
+why, it’s nice and simple, and you’re not gonna cause anyone any issues. But personally, I like using more
+copyleft-style licenses for my libraries. I’m usually okay with some big company making proprietary
+software that uses my library (although this hasn’t happened yet, so we’ll see how I actually feel if it
+does), but it’s important to me that any changes they make are made freely available. It’s only when that happens
+that we can all benefit, in the spirit of FOSS. If someone could just come take my library, improve on it,
+sell it as a product (or part of a product), and keep their improvements to themself, making sure only they
+benefit, I’d feel terrible, and like there wasn’t much point in making the library at all.</p>
+
+<p>The GNU Lesser General Public License (LGPL) is the perfect license for this, it’s designed for libraries
+and for allowing the integration of proprietary and free software. So why I am against it for Go code?</p>
+
+<p>Well just as I was deciding that the LGPL would be right for my upcoming library, I remembered something
+I heard once about dynamic linking, or something. I looked into it, and found out that the LGPL requires
+proprietary code to dynamically link to the LGPL’d library. Since I’m programming in Go, which pretty much
+always statically links everything, this is not an option.</p>
+
+<p>Thankfully, I found <a href="https://softwareengineering.stackexchange.com/q/179084">these</a>
+<a href="https://softwareengineering.stackexchange.com/q/221365">two</a> Software Engineering Stack Exchange questions,
+and learned that there was another license that can do what I want, the Mozilla Public License (MPL 2.0).
+I’d heard of this license before, but never had a reason to use it. But it seems it’s the perfect choice
+for Go libraries. It’s very similar to the LGPL, but allows for static linking.</p>
+
+<p>There are some projects that allow dynamic linking by using the LGPL with a special clause, like
+<a href="https://www.wxwidgets.org/about/licence/">wxWidgets</a> and <a href="http://wiki.zeromq.org/area:licensing">ZeroMQ</a>.
+But modifying an existing license is not a trivial thing to do, and I Am not A Lawyer. It also means you’re on your own
+if someone doesn’t follow the terms of the license. If you use a standard license then there will be existing
+lawyers that understand it, and maybe even organizations like the FSF, Mozilla, etc, could help you out.</p>
+
+<p>ZeroMQ even says they prefer the MPL 2.0:</p>
+
+<blockquote>
+  <p>It is the intention of the ZeroMQ community to move gradually towards the Mozilla Public License v2, as a replacement for the current LGPLv3 + static link exception.</p>
+
+  <p>MPLv2 offers largely the same advantages as our custom LGPLv3 + static link exception license, with the added advantage of being a standard license, thus easier for corporate lawyers to accept.</p>
+
+  <p>MPLv2 is the recommended license for new ZeroMQ projects, and where possible, ZeroMQ projects should collect approval from contributors to move towards MPLv2.</p>
+</blockquote>
+
+<p>That’s good enough for me :)</p>
+
+<p>The one potential issue I did <a href="https://softwareengineering.stackexchange.com/a/400544">find</a> with the MPL is
+that it works on the file level. So it would be possible to write a new feature in a new file and not share it.</p>
+
+<blockquote>
+  <p>For example, someone could take one of the main file of your project, add <code class="language-plaintext highlighter-rouge">import my_private_new_file</code>, and
+modify your main method for example by adding <code class="language-plaintext highlighter-rouge">my_private_new_file.newAwesomeFeature.run()</code></p>
+
+  <p>And this way he could add new features to your project while only releasing the modified main file and
+keeping the actual logic of the new feature closed source in <code class="language-plaintext highlighter-rouge">my_private_new_file</code>.</p>
+</blockquote>
+
+<p>But they also say:</p>
+
+<blockquote>
+  <p>Obviously, that’s an edge-case and it is quite unlikely someone would want to do that</p>
+</blockquote>
+
+<p>And I tend to agree. I definitely wouldn’t want someone trying to do that, but it’s clearly against the spirit
+of the license, and would be legally risky. The MPL is a well established license, used by major
+players, and it is preferred over the LGPL + static linking exception. All of that together is enough for me to
+feel okay about this potential loophole.</p>
+
+<p>Onward and upward! Go forth and use the MPL 2.0 for Go libraries.</p>
+
+
+
+    <footer>
+        <br />
+        <br />
+        <br />
+        <br />
+        <br /><hr />
+<p>
+<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="/assets/images/cc-by-nc-sa_80x15.png" /></a><br/>All works on this site created by me are licensed under the <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. They may not be used for commercial purposes.
+</p>
+</footer>
+    <script>
+      twemoji.parse(document.body);
+    </script>
+</body>
+</html>

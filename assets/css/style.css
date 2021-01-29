@@ -17,11 +17,17 @@
 }
 span.nobr { white-space: nowrap; }
 
+h1, h2, h3 {
+    padding-bottom: 5px;
+    margin-bottom: 15px;
+}
+
 code, kbd, samp {
     background: var(--code);
     /* Increase border size from default and reduce padding */
     border: 2px solid var(--nc-bg-3);
     padding: 2px 4px;
+    font-style: normal;
 }
 
 pre {
@@ -57,5 +63,3 @@ img.emoji {
     margin-right: auto;
     margin-top: 1em;
 }
-
-/* Font size changes for mobile TODO*/

@@ -1,4 +1,75 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.1.1">Jekyll</generator><link href="https://www.makeworld.gq/feed.xml" rel="self" type="application/atom+xml" /><link href="https://www.makeworld.gq/" rel="alternate" type="text/html" /><updated>2021-01-22T12:33:19-05:00</updated><id>https://www.makeworld.gq/feed.xml</id><title type="html">www.makeworld.gq</title><subtitle>makeworld's website.</subtitle><entry><title type="html">Introduction to Go Modules</title><link href="https://www.makeworld.gq/2020/11/go_modules.html" rel="alternate" type="text/html" title="Introduction to Go Modules" /><published>2020-11-13T00:00:00-05:00</published><updated>2020-11-13T00:00:00-05:00</updated><id>https://www.makeworld.gq/2020/11/go_modules</id><content type="html" xml:base="https://www.makeworld.gq/2020/11/go_modules.html">&lt;p&gt;I’ve seen many people online talk about liking &lt;a href=&quot;https://golang.org/&quot;&gt;Go&lt;/a&gt; and using it, but being confused by its dependency system,
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.1.1">Jekyll</generator><link href="https://www.makeworld.gq/feed.xml" rel="self" type="application/atom+xml" /><link href="https://www.makeworld.gq/" rel="alternate" type="text/html" /><updated>2021-01-29T11:24:41-05:00</updated><id>https://www.makeworld.gq/feed.xml</id><title type="html">www.makeworld.gq</title><subtitle>makeworld's website.</subtitle><entry><title type="html">Don’t use the LGPL for Go code</title><link href="https://www.makeworld.gq/2021/01/lgpl_go.html" rel="alternate" type="text/html" title="Don’t use the LGPL for Go code" /><published>2021-01-29T00:00:00-05:00</published><updated>2021-01-29T00:00:00-05:00</updated><id>https://www.makeworld.gq/2021/01/lgpl_go</id><content type="html" xml:base="https://www.makeworld.gq/2021/01/lgpl_go.html">&lt;p&gt;&lt;strong&gt;TL;DR:&lt;/strong&gt; Use the Mozilla Public License (MPL 2.0). It’s like the LGPL, but allows static linking.&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;I’m working on a dithering library in Go. I’ll be releasing it soon, in a few weeks maybe,
+and I’ll write a post about it when that time comes. But it got me thinking about licensing,
+and what license I should use for the library.&lt;/p&gt;
+
+&lt;p&gt;The vast majority of libraries I’ve seen stick to permissive licenses, mainly MIT. And I understand
+why, it’s nice and simple, and you’re not gonna cause anyone any issues. But personally, I like using more
+copyleft-style licenses for my libraries. I’m usually okay with some big company making proprietary
+software that uses my library (although this hasn’t happened yet, so we’ll see how I actually feel if it
+does), but it’s important to me that any changes they make are made freely available. It’s only when that happens
+that we can all benefit, in the spirit of FOSS. If someone could just come take my library, improve on it,
+sell it as a product (or part of a product), and keep their improvements to themself, making sure only they
+benefit, I’d feel terrible, and like there wasn’t much point in making the library at all.&lt;/p&gt;
+
+&lt;p&gt;The GNU Lesser General Public License (LGPL) is the perfect license for this, it’s designed for libraries
+and for allowing the integration of proprietary and free software. So why I am against it for Go code?&lt;/p&gt;
+
+&lt;p&gt;Well just as I was deciding that the LGPL would be right for my upcoming library, I remembered something
+I heard once about dynamic linking, or something. I looked into it, and found out that the LGPL requires
+proprietary code to dynamically link to the LGPL’d library. Since I’m programming in Go, which pretty much
+always statically links everything, this is not an option.&lt;/p&gt;
+
+&lt;p&gt;Thankfully, I found &lt;a href=&quot;https://softwareengineering.stackexchange.com/q/179084&quot;&gt;these&lt;/a&gt;
+&lt;a href=&quot;https://softwareengineering.stackexchange.com/q/221365&quot;&gt;two&lt;/a&gt; Software Engineering Stack Exchange questions,
+and learned that there was another license that can do what I want, the Mozilla Public License (MPL 2.0).
+I’d heard of this license before, but never had a reason to use it. But it seems it’s the perfect choice
+for Go libraries. It’s very similar to the LGPL, but allows for static linking.&lt;/p&gt;
+
+&lt;p&gt;There are some projects that allow dynamic linking by using the LGPL with a special clause, like
+&lt;a href=&quot;https://www.wxwidgets.org/about/licence/&quot;&gt;wxWidgets&lt;/a&gt; and &lt;a href=&quot;http://wiki.zeromq.org/area:licensing&quot;&gt;ZeroMQ&lt;/a&gt;.
+But modifying an existing license is not a trivial thing to do, and I Am not A Lawyer. It also means you’re on your own
+if someone doesn’t follow the terms of the license. If you use a standard license then there will be existing
+lawyers that understand it, and maybe even organizations like the FSF, Mozilla, etc, could help you out.&lt;/p&gt;
+
+&lt;p&gt;ZeroMQ even says they prefer the MPL 2.0:&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;It is the intention of the ZeroMQ community to move gradually towards the Mozilla Public License v2, as a replacement for the current LGPLv3 + static link exception.&lt;/p&gt;
+
+  &lt;p&gt;MPLv2 offers largely the same advantages as our custom LGPLv3 + static link exception license, with the added advantage of being a standard license, thus easier for corporate lawyers to accept.&lt;/p&gt;
+
+  &lt;p&gt;MPLv2 is the recommended license for new ZeroMQ projects, and where possible, ZeroMQ projects should collect approval from contributors to move towards MPLv2.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;That’s good enough for me :)&lt;/p&gt;
+
+&lt;p&gt;The one potential issue I did &lt;a href=&quot;https://softwareengineering.stackexchange.com/a/400544&quot;&gt;find&lt;/a&gt; with the MPL is
+that it works on the file level. So it would be possible to write a new feature in a new file and not share it.&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;For example, someone could take one of the main file of your project, add &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;import my_private_new_file&lt;/code&gt;, and
+modify your main method for example by adding &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;my_private_new_file.newAwesomeFeature.run()&lt;/code&gt;&lt;/p&gt;
+
+  &lt;p&gt;And this way he could add new features to your project while only releasing the modified main file and
+keeping the actual logic of the new feature closed source in &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;my_private_new_file&lt;/code&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;But they also say:&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;Obviously, that’s an edge-case and it is quite unlikely someone would want to do that&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;And I tend to agree. I definitely wouldn’t want someone trying to do that, but it’s clearly against the spirit
+of the license, and would be legally risky. The MPL is a well established license, used by major
+players, and it is preferred over the LGPL + static linking exception. All of that together is enough for me to
+feel okay about this potential loophole.&lt;/p&gt;
+
+&lt;p&gt;Onward and upward! Go forth and use the MPL 2.0 for Go libraries.&lt;/p&gt;</content><author><name></name></author><summary type="html">TL;DR: Use the Mozilla Public License (MPL 2.0). It’s like the LGPL, but allows static linking.</summary></entry><entry><title type="html">Introduction to Go Modules</title><link href="https://www.makeworld.gq/2020/11/go_modules.html" rel="alternate" type="text/html" title="Introduction to Go Modules" /><published>2020-11-13T00:00:00-05:00</published><updated>2020-11-13T00:00:00-05:00</updated><id>https://www.makeworld.gq/2020/11/go_modules</id><content type="html" xml:base="https://www.makeworld.gq/2020/11/go_modules.html">&lt;p&gt;I’ve seen many people online talk about liking &lt;a href=&quot;https://golang.org/&quot;&gt;Go&lt;/a&gt; and using it, but being confused by its dependency system,
 called Go modules. This blog post aims to provide a simple introduction with examples. It focuses mostly
 on Unix-based systems like Linux and macOS over Windows.&lt;/p&gt;
 
