@@ -41,6 +41,8 @@ code, kbd, samp {
 pre {
     background: var(--code);
     border: 2px solid var(--nc-bg-3);
+    tab-size: 4;
+    -moz-tab-size: 4;
 }
 
 blockquote {
