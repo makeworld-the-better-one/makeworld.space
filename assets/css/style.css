@@ -1,9 +1,14 @@
 @import url("https://fonts.xz.style/serve/fira-code.css");
 
+* {
+    font-variant-ligatures: none;
+}
+
 :root {
 	--nc-font-sans: 'Fira Code', monospace;
 	--nc-font-mono: 'Fira Code', monospace;
-    --nc-bg-1: #303030; /*#292929;*/
+	/* Custom theme colors */
+    --nc-bg-1: #303030;
     --nc-bg-2: #165D00;
     --nc-bg-3: #000000;
     --nc-tx-1: #FFFFFF;
@@ -12,8 +17,11 @@
     --nc-lk-2: #008ABA;
     --nc-ac-1: #FFFFFF;
     --nc-ac-tx: #000000;
+    --code: #1F4025;
 
-    --code: #1F4025; /*#401F1F;*/
+    --base: 0.8rem;
+    --grid-gutter: var(--base);
+    --grid-height: calc(2 * var(--base));
 }
 span.nobr { white-space: nowrap; }
 
@@ -62,4 +70,99 @@ img.emoji {
     margin-left: 5%;
     margin-right: auto;
     margin-top: 1em;
+}
+
+/*
+Center images that are just regular images from markdown, and give them a good margin
+*/
+body > img:not(.emoji), p > img:not(.emoji) {
+    display: block;
+    margin: var(--grid-height) auto;
+}
+
+/* Special div for putting images beside each other */
+div.sidebyside {
+    text-align: center;
+    margin: calc(0.5 * var(--grid-height)) 0;
+}
+div.sidebyside > img {
+    text-align: center;
+    margin: calc(0.5 * var(--grid-height)) var(--grid-gutter);
+}
+
+/*
+The image carousel stuff below is copied from:
+https://github.com/surma/surma.dev/blob/master/static/styles.css
+*/
+
+figure {
+  margin: calc(var(--grid-height) + 2 * var(--grid-gutter)) 0 0;
+}
+figure {
+  position: relative;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+figure > * {
+  max-width: 100%;
+  height: auto;
+}
+figure > p:first-child,
+figcaption > p:first-child {
+  display:contents;
+}
+figcaption {
+  margin-top: var(--grid-height);
+  max-width: calc(100% - 2 * var(--grid-height));
+  margin: calc(0.5 * var(--grid-height)) auto var(--grid-height); /* smaller top margin */
+  text-align: center;
+  font-style: italic; /* Replaces the weird slanting that was done by Surma before */
+}
+.carousel {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  width: 100%;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+
+  /* by me */
+  margin-top: var(--grid-height);
+  margin-bottom: calc(2 * var(--grid-height));
+}
+.carousel > * {
+  flex: 0 0 calc(100% - 10 * var(--grid-gutter));
+  scroll-snap-align: center;
+  margin: 0 calc(2 * var(--grid-gutter));
+}
+
+/* No longer image carousel copied stuff */
+
+.carousel img {
+    object-fit: contain;
+    display: block;
+    max-width: initial;
+}
+.carousel img:not(.dithered) {
+    /* This messes up dithered images */
+    width: 100%;
+    height: 100%;
+}
+
+.dithered {
+    /* Make pixelated */
+    image-rendering: optimizeSpeed;             /* Legal fallback */
+    image-rendering: -moz-crisp-edges;          /* Firefox        */
+    image-rendering: -o-crisp-edges;            /* Opera          */
+    image-rendering: -webkit-optimize-contrast; /* Safari         */
+    image-rendering: optimize-contrast;         /* CSS3 Proposed  */
+    image-rendering: crisp-edges;               /* CSS4 Proposed  */
+    image-rendering: pixelated;                 /* CSS4 Proposed  */
+    -ms-interpolation-mode: nearest-neighbor;   /* IE8+           */
+
+    /* Don't allow it to be scaled up in carousel */
+    max-width: 100%;
+    max-height: 100%;
 }

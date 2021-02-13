@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!--
+
+Hey, thanks for checking out the source code!
+You are loved.
+
+-->
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ditherpunk 2 — beyond 1-bit</title>
+<script async src="/assets/js/ack.min.js" data-ackee-server="https://ackee.makeworld.gq" data-ackee-domain-id="02d12b86-d4f4-47f4-ab2b-b2dbf2a7525c"></script>
+<script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://fonts.xz.style/serve/inter.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.3/new.min.css">
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="/assets/css/code.css">
+<link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Atom feed" />
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Ditherpunk 2 — beyond 1-bit | www.makeworld.gq</title>
+<meta name="generator" content="Jekyll v4.2.0" />
+<meta property="og:title" content="Ditherpunk 2 — beyond 1-bit" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="makeworld’s website." />
+<meta property="og:description" content="makeworld’s website." />
+<link rel="canonical" href="https://www.makeworld.gq/2021/02/dithering.html" />
+<meta property="og:url" content="https://www.makeworld.gq/2021/02/dithering.html" />
+<meta property="og:site_name" content="www.makeworld.gq" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2021-02-12T00:00:00-05:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Ditherpunk 2 — beyond 1-bit" />
+<script type="application/ld+json">
+{"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://www.makeworld.gq/assets/images/cube.png"}},"datePublished":"2021-02-12T00:00:00-05:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://www.makeworld.gq/2021/02/dithering.html"},"url":"https://www.makeworld.gq/2021/02/dithering.html","description":"makeworld’s website.","@type":"BlogPosting","headline":"Ditherpunk 2 — beyond 1-bit","dateModified":"2021-02-12T00:00:00-05:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+</head>
+<body>
+    <a rel="me" href="https://sunbeam.city/@makeworld"></a>
+    <header>
+        <h3><span class="nobr">www.makeworld.gq</span></h3>
+        <nav>
+<a href="/">Home</a>
+<a href="/about/">About</a>
+<a href="/blog/">Blog</a>
+
+        </nav>
+    </header>
+    
+    <h1>Ditherpunk 2 — beyond 1-bit</h1>
+    
+    
+    <p>Feb 12th, 2021<br>
+by <strong>makeworld</strong></p>
+
+<hr />
+
+<p><em>This post contains some images that need to be viewed at 100% size to be seen correctly. If you normally browse
+at a higher zoom level than 100%, please zoom out when you get to any of the images.</em></p>
+
+<hr />
+
+<p>Just yesterday, I released my <a href="https://github.com/makeworld-the-better-one/dither">dithering library</a>, written in Go.
+It’s the product of many hours of research, experimentation, and refactoring. I’m
+excited that it’s finally out, and to see what people create with it. Personally I’d like to create a CLI dithering
+tool at some point that uses it.</p>
+
+<p>Creating this library required research into the different algorithms for dithering, and how to implement them.
+Unfortunately, not all of that knowledge is easily found. It’s spread across blog posts, Wikipedia pages without
+citations, old books, and code comments. Recently, Surma wrote an article called
+<a href="https://surma.dev/things/ditherpunk/">Ditherpunk — The article I wish I had about monochrome image dithering</a>.
+It is an invaluable resource that combines lots of knowledge about dithering into one place. The main thing missing
+from the post, however, is going beyond “monochrome”. Surma shows us how to dither with a 1-bit palette of black and
+white, but what about more shades of gray? What about colour images? With this blog post I’d like to explore those
+techniques, taking them out of my code and into English, so you can easily apply them elsewhere.</p>
+
+<p><strong>First off, please read Surma’s post.</strong> It explains what dithering is, how it works, and many different algorithms.
+I don’t feel the need to explain these again, but merely add on what I’ve learned.</p>
+
+<h2 id="overview">Overview</h2>
+
+<p>Dithering operations consist of at least two steps, applied to each pixel. Sometimes there are further steps, like
+“modify these nearby pixels”, but these are the basic ones.</p>
+
+<ol>
+  <li>Modify the pixel’s colour value.</li>
+  <li>Find the colour in the palette that is “closest” to that modified value and use that on the output image.</li>
+</ol>
+
+<p>Now, we know from Surma’s post that step 1 must be done with linear RGB values. Otherwise, different values will be
+affected differently – for example adding 5 to each colour won’t affect all colours the same way.</p>
+
+<p>But what about step 2? How do we find the closest colour in the palette? In 1-bit dithering we don’t have to worry
+about this, because anything above 0.5 is white, and anything below is black. But when your palette colours can be
+anyhere in a 3D space, it is something that needs to be figured out.</p>
+
+<p>Perhaps surprisingly, we’re not looking for a way that matches human perception. In fact, we are using Euclidean
+distance with linear RGB values, which doesn’t match human perception at all! Why is this?
+Thomas Mansencal (<a href="https://github.com/KelSolaar">@KelSolaar</a>) explains it best:</p>
+
+<blockquote>
+  <p>You can factor out the observer [the human] because what you are interested in here is basically energy
+conservation. The idea being that for a given pool of radiant power emitters, if you remove a certain number of
+them, by how much must the radiant power of the remaining ones be increased to be the same as that of the full
+pool. It is really a ratio and doing those operations in a linear space is totally appropriate!</p>
+</blockquote>
+
+<p>This helped it click for me. Dithering can be thought of as trying to reconstruct the “radiant power” of the original
+pixel colours, while restricted to a certain set of “emitters”, aka the palette colours. It is only with linearized
+RGB values that we can properly measure the radiant power.</p>
+
+<h2 id="random-noise-grayscale">Random Noise (grayscale)</h2>
+
+<p>Random noise is a good one to start with, to show the differences between 1-bit dithering and larger palettes.</p>
+
+<p>Surma does this by basically just adding a random number from -0.5 to 0.5, and then thresholding it.</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">grayscaleImage</span><span class="p">.</span><span class="nx">mapSelf</span><span class="p">(</span><span class="nx">brightness</span> <span class="o">=&gt;</span>
+  <span class="nx">brightness</span> <span class="o">+</span> <span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">random</span><span class="p">()</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.5</span> 
+    <span class="p">?</span> <span class="mf">1.0</span> 
+    <span class="p">:</span> <span class="mf">0.0</span>
+<span class="p">);</span>
+</code></pre></div></div>
+
+<p>In my library, there are two separate random noise functions. One is for grayscale, and one is for RGB. The grayscale
+one looks like this:</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">clamp</span><span class="p">(</span><span class="kt">float32</span><span class="p">(</span><span class="n">gray</span><span class="p">)</span> <span class="o">+</span> <span class="m">255.0</span><span class="o">*</span><span class="p">(</span><span class="n">rand</span><span class="o">.</span><span class="n">Float32</span><span class="p">()</span><span class="o">*</span><span class="p">(</span><span class="n">max</span><span class="o">-</span><span class="n">min</span><span class="p">)</span><span class="o">+</span><span class="n">min</span><span class="p">)</span> <span class="o">+</span> <span class="m">0.5</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>The math with <code class="language-plaintext highlighter-rouge">min</code> and <code class="language-plaintext highlighter-rouge">max</code> is just to put the random value in the desired range. If we clean that up it’s more
+understandable:</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">clamp</span><span class="p">(</span><span class="kt">float32</span><span class="p">(</span><span class="n">gray</span><span class="p">)</span> <span class="o">+</span> <span class="m">255.0</span><span class="o">*</span><span class="n">rand</span><span class="p">()</span> <span class="o">+</span> <span class="m">0.5</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">rand()</code> just represents a function that does whatever range we want, -0.5 to 0.5 in this case.
+ <code class="language-plaintext highlighter-rouge">clamp</code> keeps the result in the range 0-255.</p>
+
+<p>So, obviously this is quite similar to what Surma does. The heavy lifing of the dithering in this case is done by the
+other code, the part that finds the best palette colour.</p>
+
+<p>The main thing that’s worth noting here is that my colour values are in the range 0-255, so I have to multiply the
+random value to scale it in the right range. But importantly, I also add 0.5.</p>
+
+<h3 id="why">Why?</h3>
+
+<p>You can skip this section if you want. Just make sure to always add 0.5 when scaling values.</p>
+
+<p>This is to produce correct values in the end, due to rounding. For example, consider if the min and max random values
+were -0.5 and 0.5. This means that pure black should always stay black, and pure white should always stay white.</p>
+
+<p>Pure white has a value of 255. So what happens if the random value being added is -0.5?</p>
+
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mi>o</mi><mi>l</mi><mi>o</mi><mi>u</mi><mi>r</mi><mo>+</mo><mo stretchy="false">(</mo><mn>255</mn><mo>×</mo><mi>r</mi><mi>a</mi><mi>n</mi><mi>d</mi><mi>o</mi><mi>m</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">colour + (255 \times random)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.77777em;vertical-align:-0.08333em;"></span><span class="mord mathdefault">c</span><span class="mord mathdefault">o</span><span class="mord mathdefault" style="margin-right:0.01968em;">l</span><span class="mord mathdefault">o</span><span class="mord mathdefault">u</span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">2</span><span class="mord">5</span><span class="mord">5</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord mathdefault">a</span><span class="mord mathdefault">n</span><span class="mord mathdefault">d</span><span class="mord mathdefault">o</span><span class="mord mathdefault">m</span><span class="mclose">)</span></span></span></span></span>
+
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>255</mn><mo>+</mo><mo stretchy="false">(</mo><mn>255</mn><mo>×</mo><mo>−</mo><mn>0.5</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">255 + (255 \times -0.5)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">2</span><span class="mord">5</span><span class="mord">5</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">2</span><span class="mord">5</span><span class="mord">5</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">−</span><span class="mord">0</span><span class="mord">.</span><span class="mord">5</span><span class="mclose">)</span></span></span></span></span>
+
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>255</mn><mo>+</mo><mo stretchy="false">(</mo><mo>−</mo><mn>127.5</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">255 + (-127.5)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">2</span><span class="mord">5</span><span class="mord">5</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">−</span><span class="mord">1</span><span class="mord">2</span><span class="mord">7</span><span class="mord">.</span><span class="mord">5</span><span class="mclose">)</span></span></span></span></span>
+
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>127.5</mn></mrow><annotation encoding="application/x-tex">127.5</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span><span class="mord">2</span><span class="mord">7</span><span class="mord">.</span><span class="mord">5</span></span></span></span></span>
+
+<p>And when rounded to an integer, we get <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>127</mn></mrow><annotation encoding="application/x-tex">127</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span><span class="mord">2</span><span class="mord">7</span></span></span></span>. With a 1-bit palette, you now have a pure white value that’s been quantized to black.
+If <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.5</mn></mrow><annotation encoding="application/x-tex">0.5</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">0</span><span class="mord">.</span><span class="mord">5</span></span></span></span> is added, this is all avoided.</p>
+
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>255</mn><mo>+</mo><mo stretchy="false">(</mo><mn>255</mn><mo>×</mo><mo>−</mo><mn>0.5</mn><mo stretchy="false">)</mo><mo>+</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">255 + (255 \times -0.5) + 0.5</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">2</span><span class="mord">5</span><span class="mord">5</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">2</span><span class="mord">5</span><span class="mord">5</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">−</span><span class="mord">0</span><span class="mord">.</span><span class="mord">5</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">0</span><span class="mord">.</span><span class="mord">5</span></span></span></span></span>
+
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>255</mn><mo>+</mo><mo stretchy="false">(</mo><mo>−</mo><mn>127.5</mn><mo stretchy="false">)</mo><mo>+</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">255 + (-127.5) + 0.5</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">2</span><span class="mord">5</span><span class="mord">5</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">−</span><span class="mord">1</span><span class="mord">2</span><span class="mord">7</span><span class="mord">.</span><span class="mord">5</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">0</span><span class="mord">.</span><span class="mord">5</span></span></span></span></span>
+
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>128</mn></mrow><annotation encoding="application/x-tex">128</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span><span class="mord">2</span><span class="mord">8</span></span></span></span></span>
+
+<p>This is not really about dithering, but this is a pretty important point to get things right mathematically.
+Make sure you do it!</p>
+
+<h2 id="random-noise-rgb">Random Noise (RGB)</h2>
+
+<p>Back to random noise, but for colour this time.</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">r</span> <span class="o">=</span> <span class="n">clamp</span><span class="p">(</span><span class="kt">float32</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">+</span> <span class="m">255.0</span><span class="o">*</span><span class="p">(</span><span class="n">rand</span><span class="o">.</span><span class="n">Float32</span><span class="p">()</span><span class="o">*</span><span class="p">(</span><span class="n">maxR</span><span class="o">-</span><span class="n">minR</span><span class="p">)</span><span class="o">+</span><span class="n">minR</span><span class="p">)</span> <span class="o">+</span> <span class="m">0.5</span><span class="p">)</span>
+<span class="n">g</span> <span class="o">=</span> <span class="n">clamp</span><span class="p">(</span><span class="kt">float32</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="o">+</span> <span class="m">255.0</span><span class="o">*</span><span class="p">(</span><span class="n">rand</span><span class="o">.</span><span class="n">Float32</span><span class="p">()</span><span class="o">*</span><span class="p">(</span><span class="n">maxG</span><span class="o">-</span><span class="n">minG</span><span class="p">)</span><span class="o">+</span><span class="n">minG</span><span class="p">)</span> <span class="o">+</span> <span class="m">0.5</span><span class="p">)</span>
+<span class="n">b</span> <span class="o">=</span> <span class="n">clamp</span><span class="p">(</span><span class="kt">float32</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">+</span> <span class="m">255.0</span><span class="o">*</span><span class="p">(</span><span class="n">rand</span><span class="o">.</span><span class="n">Float32</span><span class="p">()</span><span class="o">*</span><span class="p">(</span><span class="n">maxB</span><span class="o">-</span><span class="n">minB</span><span class="p">)</span><span class="o">+</span><span class="n">minB</span><span class="p">)</span> <span class="o">+</span> <span class="m">0.5</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>And simplified:</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">r</span> <span class="o">=</span> <span class="n">clamp</span><span class="p">(</span><span class="kt">float32</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">+</span> <span class="m">255.0</span><span class="o">*</span><span class="n">randR</span><span class="p">()</span> <span class="o">+</span> <span class="m">0.5</span><span class="p">)</span>
+<span class="n">g</span> <span class="o">=</span> <span class="n">clamp</span><span class="p">(</span><span class="kt">float32</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="o">+</span> <span class="m">255.0</span><span class="o">*</span><span class="n">randG</span><span class="p">()</span> <span class="o">+</span> <span class="m">0.5</span><span class="p">)</span>
+<span class="n">b</span> <span class="o">=</span> <span class="n">clamp</span><span class="p">(</span><span class="kt">float32</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">+</span> <span class="m">255.0</span><span class="o">*</span><span class="n">randB</span><span class="p">()</span> <span class="o">+</span> <span class="m">0.5</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Pretty simple, it just adds randomness in each channel. This can be done with grayscale images too, but it won’t
+work very well, because grayscale colours only actually have one dimension. So it will just not add as much
+randomness as you would expect.</p>
+
+<p>Also note that usually you’ll want the random ranges to be the same for R, G, and B.</p>
+
+<p>Here’s an example:</p>
+
+<section class="carousel">
+
+<figure>
+<img class="dithered" src="/assets/images/dithering/peppers.png" />
+<figcaption>
+Original image
+</figcaption>
+</figure>
+
+<figure>
+<img class="dithered" src="/assets/images/dithering/random_noise_rgb_red-green-black.png" />
+<figcaption>
+Random Noise (palette is red, green, black)
+</figcaption>
+</figure>
+
+</section>
+
+<h2 id="ordered-dithering">Ordered Dithering</h2>
+
+<h3 id="modifying-threshold-matrices">Modifying threshold matrices</h3>
+
+<p>Most of the resources online that talk about ordered dithering talk about a “threshold matrix”. “Thresholding” is
+how these matrices are applied for 1-bit dithering. You divide the matrix by whatever number is specified, scale
+it to the colour value range, and compare it to each pixel in the image. If it’s less than the matrix value, make
+it black, otherwise white. Obviously this doesn’t work with any other kind of palette. So what’s the solution?</p>
+
+<p><a href="https://en.wikipedia.org/wiki/Ordered_dithering">Wikipedia</a> offers an answer. Unfortunately there’s no citation,
+but I’ve confirmed independently that it works. Here it is with some of my own math added as well.</p>
+
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>255</mn><mo>×</mo><mi>s</mi><mi>t</mi><mi>r</mi><mi>e</mi><mi>n</mi><mi>g</mi><mi>t</mi><mi>h</mi><mo stretchy="false">)</mo><mo>×</mo><mrow><mo fence="true">(</mo><mfrac><mrow><mi>c</mi><mi>e</mi><mi>l</mi><mi>l</mi><mo>+</mo><mn>1</mn></mrow><mrow><mi>m</mi><mi>a</mi><mi>x</mi></mrow></mfrac><mo>−</mo><mn>0.5</mn><mo fence="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">(255 \times strength) \times \left( \frac{cell + 1}{max} - 0.5 \right)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">2</span><span class="mord">5</span><span class="mord">5</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathdefault">s</span><span class="mord mathdefault">t</span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord mathdefault">e</span><span class="mord mathdefault">n</span><span class="mord mathdefault" style="margin-right:0.03588em;">g</span><span class="mord mathdefault">t</span><span class="mord mathdefault">h</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:2.40003em;vertical-align:-0.95003em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size3">(</span></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.37144em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathdefault">m</span><span class="mord mathdefault">a</span><span class="mord mathdefault">x</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathdefault">c</span><span class="mord mathdefault">e</span><span class="mord mathdefault" style="margin-right:0.01968em;">l</span><span class="mord mathdefault" style="margin-right:0.01968em;">l</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord">0</span><span class="mord">.</span><span class="mord">5</span><span class="mclose delimcenter" style="top:0em;"><span class="delimsizing size3">)</span></span></span></span></span></span></span>
+
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mi>e</mi><mi>l</mi><mi>l</mi></mrow><annotation encoding="application/x-tex">cell</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathdefault">c</span><span class="mord mathdefault">e</span><span class="mord mathdefault" style="margin-right:0.01968em;">l</span><span class="mord mathdefault" style="margin-right:0.01968em;">l</span></span></span></span> is a single cell of the matrix.</p>
+
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mi>t</mi><mi>r</mi><mi>e</mi><mi>n</mi><mi>g</mi><mi>t</mi><mi>h</mi></mrow><annotation encoding="application/x-tex">strength</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord mathdefault">s</span><span class="mord mathdefault">t</span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord mathdefault">e</span><span class="mord mathdefault">n</span><span class="mord mathdefault" style="margin-right:0.03588em;">g</span><span class="mord mathdefault">t</span><span class="mord mathdefault">h</span></span></span></span> is a percentage, usually a float from <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn></mrow><annotation encoding="application/x-tex">0</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">0</span></span></span></span> to <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1.0</mn></mrow><annotation encoding="application/x-tex">1.0</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span><span class="mord">.</span><span class="mord">0</span></span></span></span>. It’s the amount the matrix will be applied to the
+image. The closer to zero it is, the smaller the range of input colors that will be dithered. Colors outside
+that range will be quantized. Usually you’ll want a strength of <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1.0</mn></mrow><annotation encoding="application/x-tex">1.0</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span><span class="mord">.</span><span class="mord">0</span></span></span></span>, to apply the matrix and dither fully, but
+sometimes reducing it can be useful, to reduce noise in the output image. It is inversely proportional to contrast –
+that is, when you reduce the <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mi>t</mi><mi>r</mi><mi>e</mi><mi>n</mi><mi>g</mi><mi>t</mi><mi>h</mi></mrow><annotation encoding="application/x-tex">strength</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord mathdefault">s</span><span class="mord mathdefault">t</span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord mathdefault">e</span><span class="mord mathdefault">n</span><span class="mord mathdefault" style="margin-right:0.03588em;">g</span><span class="mord mathdefault">t</span><span class="mord mathdefault">h</span></span></span></span>, it is visually similar to increasing the contrast.</p>
+
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mi>t</mi><mi>r</mi><mi>e</mi><mi>n</mi><mi>g</mi><mi>t</mi><mi>h</mi></mrow><annotation encoding="application/x-tex">strength</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord mathdefault">s</span><span class="mord mathdefault">t</span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord mathdefault">e</span><span class="mord mathdefault">n</span><span class="mord mathdefault" style="margin-right:0.03588em;">g</span><span class="mord mathdefault">t</span><span class="mord mathdefault">h</span></span></span></span> can also be negative, from <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn></mrow><annotation encoding="application/x-tex">0</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">0</span></span></span></span> to <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mn>1.0</mn></mrow><annotation encoding="application/x-tex">-1.0</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">−</span><span class="mord">1</span><span class="mord">.</span><span class="mord">0</span></span></span></span>. This is useful in certain cases where the matrix usually
+makes things bright, like what Surma describes with Bayer matrices.</p>
+
+<p>Note that <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>255</mn></mrow><annotation encoding="application/x-tex">255</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">2</span><span class="mord">5</span><span class="mord">5</span></span></span></span> is multiplied by <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mi>t</mi><mi>r</mi><mi>e</mi><mi>n</mi><mi>g</mi><mi>t</mi><mi>h</mi></mrow><annotation encoding="application/x-tex">strength</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord mathdefault">s</span><span class="mord mathdefault">t</span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord mathdefault">e</span><span class="mord mathdefault">n</span><span class="mord mathdefault" style="margin-right:0.03588em;">g</span><span class="mord mathdefault">t</span><span class="mord mathdefault">h</span></span></span></span> because the colours in my code are in the range <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo separator="true">,</mo><mn>255</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0, 255]</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord">2</span><span class="mord">5</span><span class="mord">5</span><span class="mclose">]</span></span></span></span>. If yours
+are different you can change that number.</p>
+
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mi>a</mi><mi>x</mi></mrow><annotation encoding="application/x-tex">max</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathdefault">m</span><span class="mord mathdefault">a</span><span class="mord mathdefault">x</span></span></span></span> is the value the entire matrix is divided by. It represents the maximum value of the matrix, and normalizes
+it by dividing. Usually this is the product of the dimensions of the matrix. It can also be the
+largest value in the matrix plus one.</p>
+
+<p>The result of applying this operation to each cell of the matrix is a new, precalculated matrix, which can be added
+to a pixel’s colour value for dithering. Adding 0.5 does not need to happen in this case. In my library, I call the
+function that does this <code class="language-plaintext highlighter-rouge">convThresholdToAddition</code>, because that’s essentially the purpose of this – converting
+a threshold matrix into one that can be used for addition.</p>
+
+<p><strong>Note:</strong> This is designed for matrices that range from <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn></mrow><annotation encoding="application/x-tex">0</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">0</span></span></span></span> to <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mi>a</mi><mi>x</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">max - 1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.66666em;vertical-align:-0.08333em;"></span><span class="mord mathdefault">m</span><span class="mord mathdefault">a</span><span class="mord mathdefault">x</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span></span></span></span>. If you’re using a matrix you found that
+starts at <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn></mrow><annotation encoding="application/x-tex">1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span></span></span></span>, you’ll usually just want to subtract one from each value when you program it, then apply the operation
+I described above.</p>
+
+<h3 id="using-a-modified-matrix">Using a modified matrix</h3>
+
+<p>Now that you’ve modified the matrix so it can be used for addition, it needs to be applied to the image. This is pretty
+simple. Use modulus so the matrix values are tiled across the image, and add the same value in the R, G, and B channels.
+If you’re using a grayscale image you can just apply it in the one channel, or still use RGB. Since the same value is
+being added it doesn’t make much of a difference. Like always, make sure to clamp the values to the proper colour range.</p>
+
+<p>Doing all of this definitely works with colour images, but it’s not the greatest. Here’s an example, where the palette
+is red, green, and black.</p>
+
+<section class="carousel">
+
+<figure>
+<img class="dithered" src="/assets/images/dithering/peppers.png" />
+<figcaption>
+Original image
+</figcaption>
+</figure>
+
+<figure>
+<img class="dithered" src="/assets/images/dithering/bayer_16x16_red-green-black.png" />
+<figcaption>
+Ordered dithering (Bayer 16x16)
+</figcaption>
+</figure>
+
+<figure>
+<img class="dithered" src="/assets/images/dithering/floyd-steinberg_red-green-black.png" />
+<figcaption>
+Error diffusion dithering (Floyd-Steinberg)
+</figcaption>
+</figure>
+
+</section>
+
+<p>Here it is where the palette is red, green, black, and yellow.</p>
+
+<section class="carousel">
+
+<figure>
+<img class="dithered" src="/assets/images/dithering/bayer_16x16_red-green-yellow-black.png" />
+<figcaption>
+Ordered dithering (Bayer 16x16)
+</figcaption>
+</figure>
+
+<figure>
+<img class="dithered" src="/assets/images/dithering/floyd-steinberg_red-green-yellow-black.png" />
+<figcaption>
+Error diffusion dithering (Floyd-Steinberg)
+</figcaption>
+</figure>
+
+</section>
+
+<p>As you can see, it doesn’t really emulate any of the yellow in the first example, while Floyd-Steinberg can. Once yellow is added
+to the palette it looks pretty good though.</p>
+
+<h2 id="error-diffusion-dithering">Error diffusion dithering</h2>
+
+<p>Error diffusion dithering is done pretty much the same way as Surma described. The main difference is that
+the quantization error is measured for R, G, and B, instead of a single gray value. The final bit of (pseudo) code
+looks like this:</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">clamp</span><span class="p">(</span><span class="n">r</span> <span class="o">+</span> <span class="n">er</span> <span class="o">*</span> <span class="n">matrix</span><span class="p">[</span><span class="n">y</span><span class="p">][</span><span class="n">x</span><span class="p">]</span> <span class="o">+</span> <span class="m">0.5</span><span class="p">)</span>
+<span class="n">clamp</span><span class="p">(</span><span class="n">g</span> <span class="o">+</span> <span class="n">eg</span> <span class="o">*</span> <span class="n">matrix</span><span class="p">[</span><span class="n">y</span><span class="p">][</span><span class="n">x</span><span class="p">]</span> <span class="o">+</span> <span class="m">0.5</span><span class="p">)</span>
+<span class="n">clamp</span><span class="p">(</span><span class="n">b</span> <span class="o">+</span> <span class="n">eb</span> <span class="o">*</span> <span class="n">matrix</span><span class="p">[</span><span class="n">y</span><span class="p">][</span><span class="n">x</span><span class="p">]</span> <span class="o">+</span> <span class="m">0.5</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>The variables starting with <code class="language-plaintext highlighter-rouge">e</code> represent the current quantization error. 0.5 has be to be added overall, just like with random noise.</p>
+
+<h3 id="serpentine">Serpentine</h3>
+
+<p>This is unrelated to color dithering, but it’s something my library does that Surma didn’t mention, and something I couldn’t
+really find information on online – serpentine dithering.</p>
+
+<p>This is when the horizontal direction of error diffusion dithering 
+(usually left-to-right) reverses for every other line, going right-to-left. This is simple to implement, and improves results
+by removing line artifacts.</p>
+
+<p>The one thing that was hard to find any info on was how you need to reflect the error diffusion
+matrix horizontally every time you go backwards as well. Otherwise you modify pixels to your right that have already been
+finalized.</p>
+
+<p>Here’s an example of the difference serpentine dithering makes, using the simple 2D error diffusion matrix, as it has the worst
+artifacts.</p>
+
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>m</mi><mi>a</mi><mi>t</mi><mi>r</mi><mi>i</mi><mi>x</mi><mo>:</mo><mrow><mo fence="true">(</mo><mtable rowspacing="0.15999999999999992em" columnalign="center center" columnspacing="1em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mo lspace="0em" rspace="0em">∗</mo></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>0.5</mn></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>0.5</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>0</mn></mstyle></mtd></mtr></mtable><mo fence="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">matrix:
+\left(\begin{array}{cc}
+* &amp; 0.5 \\
+0.5 &amp; 0 \\
+\end{array}
+\right)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.65952em;vertical-align:0em;"></span><span class="mord mathdefault">m</span><span class="mord mathdefault">a</span><span class="mord mathdefault">t</span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord mathdefault">i</span><span class="mord mathdefault">x</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">:</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:2.40003em;vertical-align:-0.95003em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size3">(</span></span><span class="mord"><span class="mtable"><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.45em;"><span style="top:-3.61em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">∗</span></span></span><span style="top:-2.4099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">0</span><span class="mord">.</span><span class="mord">5</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.9500000000000004em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.45em;"><span style="top:-3.61em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">0</span><span class="mord">.</span><span class="mord">5</span></span></span><span style="top:-2.4099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.9500000000000004em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span></span></span><span class="mclose delimcenter" style="top:0em;"><span class="delimsizing size3">)</span></span></span></span></span></span></span>
+
+<section class="carousel">
+
+<figure>
+<img class="dithered" src="/assets/images/dithering/gradient.png" />
+<figcaption>
+Original image
+</figcaption>
+</figure>
+
+<figure>
+<img class="dithered" src="/assets/images/dithering/simple2d.png" />
+<figcaption>
+Regular error diffusion dithering
+</figcaption>
+</figure>
+
+<figure>
+<img class="dithered" src="/assets/images/dithering/simple2d_serpentine.png" />
+<figcaption>
+Serpentine error diffusion dithering
+</figcaption>
+</figure>
+
+</section>
+
+<p>In my experience, it makes sense to always do serpentine dithering for the best results.</p>
+
+<h3 id="strength">Strength</h3>
+
+<p>In the ordered dithering section I talked about how a <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mi>t</mi><mi>r</mi><mi>e</mi><mi>n</mi><mi>g</mi><mi>t</mi><mi>h</mi></mrow><annotation encoding="application/x-tex">strength</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord mathdefault">s</span><span class="mord mathdefault">t</span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord mathdefault">e</span><span class="mord mathdefault">n</span><span class="mord mathdefault" style="margin-right:0.03588em;">g</span><span class="mord mathdefault">t</span><span class="mord mathdefault">h</span></span></span></span> variable could be used to control
+how much dithering was applied. This can also be done for error diffusion, and it appears some
+graphical suites like ImageMagick even have this built-in, as is described <a href="https://learn.adafruit.com/preparing-graphics-for-e-ink-displays?view=all">here</a>.</p>
+
+<p>Here is the modified pseudocode for making use of a strength value:</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">clamp</span><span class="p">(</span><span class="n">r</span> <span class="o">+</span> <span class="n">er</span> <span class="o">*</span> <span class="n">strength</span> <span class="o">*</span> <span class="n">matrix</span><span class="p">[</span><span class="n">y</span><span class="p">][</span><span class="n">x</span><span class="p">]</span> <span class="o">+</span> <span class="m">0.5</span><span class="p">)</span>
+<span class="n">clamp</span><span class="p">(</span><span class="n">g</span> <span class="o">+</span> <span class="n">eg</span> <span class="o">*</span> <span class="n">strength</span> <span class="o">*</span> <span class="n">matrix</span><span class="p">[</span><span class="n">y</span><span class="p">][</span><span class="n">x</span><span class="p">]</span> <span class="o">+</span> <span class="m">0.5</span><span class="p">)</span>
+<span class="n">clamp</span><span class="p">(</span><span class="n">b</span> <span class="o">+</span> <span class="n">eb</span> <span class="o">*</span> <span class="n">strength</span> <span class="o">*</span> <span class="n">matrix</span><span class="p">[</span><span class="n">y</span><span class="p">][</span><span class="n">x</span><span class="p">]</span> <span class="o">+</span> <span class="m">0.5</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>And here’s an example of different strength values with Floyd-Steinberg dithering, with a palette of
+red, green, yellow, and black.</p>
+
+<section class="carousel">
+
+<figure>
+<img class="dithered" src="/assets/images/dithering/peppers.png" />
+<figcaption>
+Original image
+</figcaption>
+</figure>
+
+<figure>
+<img class="dithered" src="/assets/images/dithering/floyd-steinberg_red-green-yellow-black.png" />
+<figcaption>
+strength = 1.0
+</figcaption>
+</figure>
+
+<figure>
+<img class="dithered" src="/assets/images/dithering/floyd-steinberg_strength_08.png" />
+<figcaption>
+strength = 0.8
+</figcaption>
+</figure>
+
+<figure>
+<img class="dithered" src="/assets/images/dithering/floyd-steinberg_strength_05.png" />
+<figcaption>
+strength = 0.5
+</figcaption>
+</figure>
+
+<figure>
+<img class="dithered" src="/assets/images/dithering/floyd-steinberg_strength_02.png" />
+<figcaption>
+strength = 0.2
+</figcaption>
+</figure>
+
+</section>
+
+<p>As you can see, the strength variable is pretty much inversely proportional with contrast. A value like <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.8</mn></mrow><annotation encoding="application/x-tex">0.8</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">0</span><span class="mord">.</span><span class="mord">8</span></span></span></span>
+might be good to reduce some noise in the image, but go too low and the colours will just be inaccurate. Sticking
+to <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1.0</mn></mrow><annotation encoding="application/x-tex">1.0</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span><span class="mord">.</span><span class="mord">0</span></span></span></span> is a reasonable default.</p>
+
+<h2 id="other-things">Other things</h2>
+
+<p>This post is pretty long now, but I do have a few other things to share.</p>
+
+<p>One is about clustered-dot dithering. It looks like this:</p>
+
+<div class="sidebyside">
+<img class="dithered" src="/assets/images/dithering/david.png" />
+<img class="dithered" src="/assets/images/dithering/david_ClusteredDotDiagonal8x8.png" />
+</div>
+
+<p>Currently my library just does clustered-dot dithering with <a href="https://github.com/makeworld-the-better-one/dither/blob/v1.0.0/ordered_ditherers.go">some preprogrammed matrices</a>
+I’ve found around the Internet and in a couple books. I was unable to find any proper instructions on how to generate
+a clustered-dot dither matrix, so that they can be created on the fly, and in any size. The books
+I read hinted that it was possible, but I couldn’t find anything. <strong>If you know how to do this, please contact me!</strong>
+I will update my library and this post if I figure anything out.</p>
+
+<p>The other thing is that I used Joel Yuliluoma’s per-cell algorithm for creating Bayer matrices, as written <a href="https://bisqwit.iki.fi/story/howto/dither/jy/#Appendix%202ThresholdMatrix">here</a>
+(the second code block). Since I had to rewrite it in Go, it’s cleaner to read and understand than the original C.
+If you’re interested in implementing this yourself, you might prefer reading it. My implementation is <a href="https://github.com/makeworld-the-better-one/dither/blob/v1.0.0/pixelmappers.go#L102">here</a>.
+It’s been tested to make sure it works the exact same as Yuliluoma’s.</p>
+
+<h2 id="thanks">Thanks</h2>
+
+<p>Thanks for reading! I hope this is helpful to anyone else who is interested in dithering. And if you know Go,
+check out <a href="https://github.com/makeworld-the-better-one/dither">my library</a>! Make something cool with it. 😄</p>
+
+
+
+    <footer>
+        <br />
+        <br />
+        <br />
+        <br />
+        <br />
+        <hr />
+<p>
+<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="/assets/images/cc-by-nc-sa_80x15.png" /></a><br/>All works on this site created by me are licensed under the <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. They may not be used for commercial purposes.
+</p>
+
+    </footer>
+    <script>
+      twemoji.parse(document.body);
+    </script>
+</body>
+</html>
