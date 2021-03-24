@@ -1,0 +1,49 @@
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lolita</title>
+
+<style>
+html, body {
+  margin: 0;
+}
+#wrapper{
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+}
+#featured {
+  position: absolute;
+  width: calc(100vh * (1920 / 1080));    /*  video width / height  */
+  height: calc(100vw * (1080 / 1920));   /*  video height / width  */
+  max-width: 100%;
+  max-height: 100%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+</style>
+</head>
+
+<body>
+
+<div id="wrapper">
+<div id="featured">
+
+<video autoplay muted loop>
+<source src="/assets/videos/lolita.mp4" type="video/mp4">
+</video>
+
+</div>
+</div>
+
+</body>
+</html>
