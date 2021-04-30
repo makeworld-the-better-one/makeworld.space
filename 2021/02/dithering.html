@@ -26,8 +26,8 @@ You are loved.
 <meta name="generator" content="Jekyll v4.2.0" />
 <meta property="og:title" content="Ditherpunk 2 — beyond 1-bit" />
 <meta property="og:locale" content="en_US" />
-<meta name="description" content="Last updated: Feb. 13, 2021" />
-<meta property="og:description" content="Last updated: Feb. 13, 2021" />
+<meta name="description" content="Last updated: Apr. 30, 2021" />
+<meta property="og:description" content="Last updated: Apr. 30, 2021" />
 <link rel="canonical" href="https://www.makeworld.space/2021/02/dithering.html" />
 <meta property="og:url" content="https://www.makeworld.space/2021/02/dithering.html" />
 <meta property="og:site_name" content="www.makeworld.space" />
@@ -36,7 +36,7 @@ You are loved.
 <meta name="twitter:card" content="summary" />
 <meta property="twitter:title" content="Ditherpunk 2 — beyond 1-bit" />
 <script type="application/ld+json">
-{"headline":"Ditherpunk 2 — beyond 1-bit","dateModified":"2021-02-12T00:00:00-05:00","datePublished":"2021-02-12T00:00:00-05:00","url":"https://www.makeworld.space/2021/02/dithering.html","mainEntityOfPage":{"@type":"WebPage","@id":"https://www.makeworld.space/2021/02/dithering.html"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://www.makeworld.space/assets/images/cube.png"}},"@type":"BlogPosting","description":"Last updated: Feb. 13, 2021","@context":"https://schema.org"}</script>
+{"headline":"Ditherpunk 2 — beyond 1-bit","dateModified":"2021-02-12T00:00:00-05:00","datePublished":"2021-02-12T00:00:00-05:00","url":"https://www.makeworld.space/2021/02/dithering.html","mainEntityOfPage":{"@type":"WebPage","@id":"https://www.makeworld.space/2021/02/dithering.html"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://www.makeworld.space/assets/images/cube.png"}},"@type":"BlogPosting","description":"Last updated: Apr. 30, 2021","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
 
@@ -60,7 +60,7 @@ You are loved.
 <p>Feb 12th, 2021<br>
 by <strong>makeworld</strong></p>
 
-<p><em>Last updated: Feb. 13, 2021</em></p>
+<p><em>Last updated: Apr. 30, 2021</em></p>
 
 <hr />
 
@@ -434,6 +434,12 @@ strength = 0.2
 <p>As you can see, the strength variable is pretty much inversely proportional with contrast. A value like <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.8</mn></mrow><annotation encoding="application/x-tex">0.8</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">0</span><span class="mord">.</span><span class="mord">8</span></span></span></span>
 might be good to reduce some noise in the image, but go too low and the colours will just be inaccurate. Sticking
 to <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1.0</mn></mrow><annotation encoding="application/x-tex">1.0</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span><span class="mord">.</span><span class="mord">0</span></span></span></span> is a reasonable default.</p>
+
+<p>However this does not apply to Bayer dithering of color images. As Surma mentions, Bayer matrices are fundamentally
+biased to making images brighter. For color images, the bias occurs in all three RGB channels, and can distort
+image colors overall, making the final dithered image look inaccurate. Several sites recommend a value like <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0.64</mn></mrow><annotation encoding="application/x-tex">0.64</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">0</span><span class="mord">.</span><span class="mord">6</span><span class="mord">4</span></span></span></span>
+(256/4), and in my experience it’s a good default for color image dithering, with Bayer as well as ordered dithering
+in general.</p>
 
 <h2 id="other-things">Other things</h2>
 
